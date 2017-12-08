@@ -318,7 +318,7 @@ def insert_spdx(out, props):
     modified = False
     comment = props['commentPrefix']
 
-    for lic in props['licenses']:
+    for lic in sorted(props['licenses']):
         if lic not in props['SPDX_IDs']:
             if not modified and props['spdx_insert_before']:
                 out.write(props['spdx_insert_before'])
