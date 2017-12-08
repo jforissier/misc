@@ -153,10 +153,19 @@ def before_comment(file):
     return ''
 
 
+def comment_prefix(file):
+    if has_c_comment_style(file):
+        return ' *'
+    if has_hash_comment_style(file):
+        return '#'
+    return ''
+
+
 def file_props(file):
     props = { 'licenses': set([]), 'lic_start_end': {}, 'SPDX_IDs': set([]),
                 'arr': False, 'spdx_insertion': 0, 'spdx_insertion_before': False,
-                'spdx_insert_before': '', 'spdx_insert_after': '' }
+                'spdx_insert_before': '', 'spdx_insert_after': '',
+                'multiple_copyright_blocks': False }
     commentPrefix = ''
     lineno = 0
     hasLinaroCopyright = False
@@ -165,13 +174,11 @@ def file_props(file):
     text = []
     last_copyright = 0
     first_comment = 0
-    end_of_copyright = False
+    copyright_state = 0 # 0: initial, 1: in first copyright block, 2: after
+    blank_line_pending = False
+    blank_line_in_first_copyright_block = False
 
-    if has_c_comment_style(file):
-        commentPrefix = ' *'
-
-    if has_hash_comment_style(file): 
-        commentPrefix = '#'
+    commentPrefix = comment_prefix(file)
 
     if commentPrefix == '':
         print('Error: unknown comment style for file: ' + file)
@@ -184,16 +191,27 @@ def file_props(file):
             lineno = lineno + 1
             if not first_comment and is_start_of_comment(file, line):
                 first_comment = lineno
+
             if 'Copyright' in line:
-                if not end_of_copyright:
-                    last_copyright = lineno
                 if 'Linaro' in line:
                     hasLinaroCopyright = True
                 else:
                     hasOtherCopyright = True
-            else:
-                if last_copyright:
-                    end_of_copyright = True
+                if copyright_state == 0:
+                    copyright_state = 1
+                elif copyright_state == 2:
+                    props['multiple_copyright_blocks'] = True
+
+            if copyright_state == 1:
+                if 'Copyright' in line or AllRightsReserved in line:
+                    last_copyright = lineno
+                    if blank_line_pending:
+                        blank_line_in_first_copyright_block = True
+                elif is_blank(line, props):
+                    if copyright_state == 1:
+                        blank_line_pending = True
+                else:
+                    copyright_state = 2
 
             if re.search(BSDStart, line) or ZlibStart in line or ISCStart in line:
                 if in_license:
@@ -232,8 +250,8 @@ def file_props(file):
 
     props['pureLinaroCopyright'] = (hasLinaroCopyright and not
                                     hasOtherCopyright)
-    if len(props['licenses']) > 1:
-        # When we have several licences, insertion SDPX-IDs at the beginning
+    if len(props['licenses']) > 1 or props['multiple_copyright_blocks']:
+        # When we have several blocks, insertion SDPX-IDs at the beginning
         # of the first comment block and separate with a blank comment line
         props['spdx_insertion'] = first_comment
         props['spdx_insertion_before'] = True
@@ -244,6 +262,9 @@ def file_props(file):
         # statements
         if last_copyright:
             props['spdx_insertion'] = last_copyright
+            if blank_line_in_first_copyright_block:
+                # Visually better
+                props['spdx_insert_before'] = comment_prefix(file) + '\n'
         else:
             props['spdx_insertion'] = first_comment
             props['spdx_insertion_before'] = True
