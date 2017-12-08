@@ -155,9 +155,9 @@ def before_comment(file):
 
 def comment_prefix(file):
     if has_c_comment_style(file):
-        return ' *'
+        return ' * '
     if has_hash_comment_style(file):
-        return '#'
+        return '# '
     return ''
 
 
@@ -205,6 +205,9 @@ def file_props(file):
             if copyright_state == 1:
                 if 'Copyright' in line or AllRightsReserved in line:
                     last_copyright = lineno
+                    if has_c_comment_style(file) and line.strip()[0] != '*':
+                        n = len(line) - len(line.strip())
+                        props['commentPrefix'] = line[:n-1]
                     if blank_line_pending:
                         blank_line_in_first_copyright_block = True
                 elif is_blank(line, props):
@@ -264,7 +267,7 @@ def file_props(file):
             props['spdx_insertion'] = last_copyright
             if blank_line_in_first_copyright_block:
                 # Visually better
-                props['spdx_insert_before'] = comment_prefix(file) + '\n'
+                props['spdx_insert_before'] = comment_prefix(file).rstrip() + '\n'
         else:
             props['spdx_insertion'] = first_comment
             props['spdx_insertion_before'] = True
@@ -322,7 +325,7 @@ def insert_spdx(out, props):
         if lic not in props['SPDX_IDs']:
             if not modified and props['spdx_insert_before']:
                 out.write(props['spdx_insert_before'])
-            out.write(comment + ' SPDX-License-Identifier: ' + lic + '\n')
+            out.write(comment + 'SPDX-License-Identifier: ' + lic + '\n')
             modified = True
 
     if modified and props['spdx_insert_after']:
