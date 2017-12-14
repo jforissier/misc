@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2017, Linaro Limited
-# SPDX-License-Identifier: BSD-2-Clause
 #
 # This is a tool quickly put together to help check license headers in source
 # files in the OP-TEE project and modify them if needed. Its main purpose is
@@ -14,16 +14,17 @@
 #
 # 1. New source files
 #   1.1 Shall contain at least one copyright line
-#   1.2 Shall contain at least one SPDX license identifier
+#   1.2 Shall contain exactly one SPDX license identifier
 #   1.3 Shall not contain the mention 'All rights reserved' or similar
-#   1.4 Copyrights and license identifiers shall appear in a comment block at
-#       the first possible line in the file which can contain a comment.
-#   1.5 Files imported from external projects are not new files. The rules for
+#   1.4 The SPDX license identifier shall be the first possible line in the
+#       file which can contain a comment.
+#   1.5 The comment style for the SPDX line in C files shall be //.
+#   1.6 Files imported from external projects are not new files. The rules for
 #       existing files below apply.
-#   1.6 Example:
+#   1.7 Example:
+#       // SPDX-License-Identifier: BSD-2-Clause
 #       /*
 #        * Copyright (c) 2017, Linaro Limited
-#        * SPDX-License-Identifier: BSD-2-Clause
 #        */
 #
 # 2. Existing source files
@@ -66,7 +67,7 @@ BSDClause2 = 'Redistributions in binary form must reproduce the above'
 BSDClause3 = 'The name of the author may not be used to endorse'
 BSDClause3_1 = 'Neither the name of'
 BSDClause3_2 = 'be used to endorse or promote'
-SPDX_ID = re.compile(r'SPDX-License-Identifier: (?P<SPDX_ID>[\w\-\.]+)')
+SPDX_ID = re.compile(r'SPDX-License-Identifier: \(?(?P<SPDX_ID>[^\)]+)\)?')
 Apache2 = 'Apache License, Version 2.0'
 ZlibStart = 'This software is provided \'as-is\', without any express or implied'
 ZlibClause1 = 'The origin of this software must not be misrepresented'
@@ -76,17 +77,19 @@ ZlibEnd = ZlibClause3
 ZlibRef = 'see copyright notice in zlib.h'
 ISCStart = 'Permission to use, copy, modify, and distribute this software'
 ISCEnd = 'IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE'
+GPLStart = 'terms of the GNU General Public License'
+GPLv2OrLater = 'either version 2'
+GPLEnd = 'You should have received a copy'
+
 AllRightsReserved = 'All rights reserved'
-# IDs that we expect to find in the code. The purpose of this list is just
-# to catch typos.
-knownSPDXIDs = [ 'BSD-2-Clause', 'BSD-3-Clause', 'Apache-2.0', 'ISC', 'Zlib',
-                    'BSD-Source-Code' ]
 
 def identify_license(text, file):
     hasBSDStart = False
     hasBSDClause1 = False
     hasBSDClause2 = False
     hasBSDClause3 = False
+    hasGPLStart = False
+    hasGPLv2OrLater = False
 
     for line in text:
         if re.search(BSDStart, line):
@@ -101,6 +104,10 @@ def identify_license(text, file):
            return 'Zlib'
         if ISCStart in line:
            return 'ISC'
+        if GPLStart in line:
+           hasGPLStart = True
+        if GPLv2OrLater in line:
+           hasGPLv2OrLater = True
 
     if hasBSDStart:
         bsd = False
@@ -118,6 +125,9 @@ def identify_license(text, file):
             exit(1)
         return bsd
 
+    if hasGPLStart and hasGPLv2OrLater:
+        return 'GPL-2.0+'
+
     # Unknown license
     return ''
 
@@ -131,28 +141,6 @@ def has_c_comment_style(file):
     return (file.endswith('.c') or file.endswith('.h') or
             file.endswith('.ld') or file.endswith('.S'))
 
-
-def is_start_of_comment(file, line):
-    if has_c_comment_style(file):
-        return '/*' in line
-    if has_hash_comment_style(file):
-        return '#' in line
-
-
-def after_comment(file):
-    if has_c_comment_style(file):
-        return ' */\n'
-    if has_hash_comment_style(file):
-        return '#\n'
-    return ''
-
-
-def before_comment(file):
-    if has_c_comment_style(file):
-        return '/*\n'
-    return ''
-
-
 def comment_prefix(file):
     if has_c_comment_style(file):
         return ' * '
@@ -161,11 +149,19 @@ def comment_prefix(file):
     return ''
 
 
+def comment_prefix_for_SPDX(file):
+    if has_c_comment_style(file):
+        return '// '
+    if has_hash_comment_style(file):
+        return '# '
+    return ''
+
+
 def file_props(file):
-    props = { 'licenses': set([]), 'lic_start_end': {}, 'SPDX_IDs': set([]),
-                'arr': False, 'spdx_insertion': 0, 'spdx_insertion_before': False,
-                'spdx_insert_before': '', 'spdx_insert_after': '',
-                'multiple_copyright_blocks': False }
+    props = { 'licenses': set([]), 'lic_start_end': {}, 'SPDX_ID': '',
+                'arr': False, 'spdx_insertion': 1,
+                'multiple_copyright_blocks': False, 'comment_prefix_for_SPDX':'',
+                'has_dual_license': False, 'operator': ' AND ', 'file': file }
     commentPrefix = ''
     lineno = 0
     hasLinaroCopyright = False
@@ -173,12 +169,12 @@ def file_props(file):
     in_license = 0
     text = []
     last_copyright = 0
-    first_comment = 0
     copyright_state = 0 # 0: initial, 1: in first copyright block, 2: after
     blank_line_pending = False
     blank_line_in_first_copyright_block = False
 
     commentPrefix = comment_prefix(file)
+    props['comment_prefix_for_SPDX'] = comment_prefix_for_SPDX(file)
 
     if commentPrefix == '':
         print('Error: unknown comment style for file: ' + file)
@@ -189,8 +185,8 @@ def file_props(file):
     with open(file) as f:
         for line in f:
             lineno = lineno + 1
-            if not first_comment and is_start_of_comment(file, line):
-                first_comment = lineno
+            if lineno == 1 and line[:1] == '#!':
+                props['spdx_insertion'] = 2
 
             if 'Copyright' in line:
                 if 'Linaro' in line:
@@ -201,6 +197,10 @@ def file_props(file):
                     copyright_state = 1
                 elif copyright_state == 2:
                     props['multiple_copyright_blocks'] = True
+
+            if 'dual licen' in line:
+                props['has_dual_license'] = True
+                props['operator'] = ' OR '
 
             if copyright_state == 1:
                 if 'Copyright' in line or AllRightsReserved in line:
@@ -216,12 +216,15 @@ def file_props(file):
                 else:
                     copyright_state = 2
 
-            if re.search(BSDStart, line) or ZlibStart in line or ISCStart in line:
+            if (re.search(BSDStart, line) or ZlibStart in line or
+                ISCStart in line or GPLStart in line):
                 if in_license:
-                    print('Error: duplicate license start, file:', file)
+                    print('Error: duplicate license start, file:', file,
+                            'line:', lineno)
                     exit(1)
                 in_license = lineno
-            if BSDEnd in line or ZlibEnd in line or ISCEnd in line:
+            if (BSDEnd in line or ZlibEnd in line or ISCEnd in line or
+                GPLEnd in line):
                 lic = identify_license(text, file)
                 if lic:
                     props['licenses'].add(lic)
@@ -239,11 +242,12 @@ def file_props(file):
 
             match = re.search(SPDX_ID, line)
             if match:
-                id = match.group('SPDX_ID')
-                if id not in knownSPDXIDs:
-                    print('Error: unknown SPDX license identifier:', id)
+                id = match.group('SPDX_ID').strip()
+                if props['SPDX_ID']:
+                    print('Error: multiple SPDX-License-Identifier tag, file:',
+                          file)
                     exit(1)
-                props['SPDX_IDs'].add(id)
+                props['SPDX_ID'] = id
 
             if AllRightsReserved in line:
                 props['arr'] = True
@@ -253,26 +257,6 @@ def file_props(file):
 
     props['pureLinaroCopyright'] = (hasLinaroCopyright and not
                                     hasOtherCopyright)
-    if len(props['licenses']) > 1 or props['multiple_copyright_blocks']:
-        # When we have several blocks, insertion SDPX-IDs at the beginning
-        # of the first comment block and separate with a blank comment line
-        props['spdx_insertion'] = first_comment
-        props['spdx_insertion_before'] = True
-        props['spdx_insert_before'] = before_comment(file)
-        props['spdx_insert_after'] = after_comment(file)
-    else:
-        # ...otherwise, try to insert after the first block of copyright
-        # statements
-        if last_copyright:
-            props['spdx_insertion'] = last_copyright
-            if blank_line_in_first_copyright_block:
-                # Visually better
-                props['spdx_insert_before'] = comment_prefix(file).rstrip() + '\n'
-        else:
-            props['spdx_insertion'] = first_comment
-            props['spdx_insertion_before'] = True
-            props['spdx_insert_before'] = before_comment(file)
-            props['spdx_insert_after'] = after_comment(file)
  
     return props
 
@@ -290,8 +274,8 @@ def print_file_and_props(file, props, show_licenses = False, show_spdx = False):
         else:
             print(' NONE', end='')
     if show_spdx:
-        if props['SPDX_IDs']:
-            print('', '[' + ' '.join(props['SPDX_IDs']) + ']', end='')
+        if props['SPDX_ID']:
+            print('', '[' + props['SPDX_ID'] + ']', end='')
         else:
             print(' [NONE]', end='')
     print('')
@@ -316,20 +300,32 @@ def is_license_line(lineno, line, props):
     return skip
 
 
+def spdx_expr(props):
+    n = len(props['licenses'])
+    op = props['operator']
+    tag = ''
+
+    if  n == 1:
+        tag = list(props['licenses'])[0]
+    else:
+        tag = '(' + op.join(sorted(props['licenses'])) + ')'
+    return tag
+
 
 def insert_spdx(out, props):
     modified = False
-    comment = props['commentPrefix']
 
-    for lic in sorted(props['licenses']):
-        if lic not in props['SPDX_IDs']:
-            if not modified and props['spdx_insert_before']:
-                out.write(props['spdx_insert_before'])
-            out.write(comment + 'SPDX-License-Identifier: ' + lic + '\n')
-            modified = True
+    if props['SPDX_ID']:
+        return False
 
-    if modified and props['spdx_insert_after']:
-        out.write(props['spdx_insert_after'])
+    if props['licenses']:
+        expr = spdx_expr(props)
+        out.write(props['comment_prefix_for_SPDX'] +
+                    'SPDX-License-Identifier: ' + expr + '\n')
+        modified = True
+        if props['has_dual_license'] and len(props['licenses']) > 2:
+            print('Warning: please check if operator is correct:', tag,
+                  'file:', props[file])
 
     return modified
 
@@ -350,19 +346,25 @@ def generate_new(file, props):
                 if args.strip_license_text and is_license_line(lineno, line, props):
                     modified = True
                     continue
-                if (args.add_spdx and lineno == props['spdx_insertion'] and
-                    props['spdx_insertion_before']):
+                if args.add_spdx and lineno == props['spdx_insertion']:
                     modified = insert_spdx(out, props)
                 out.write(line) 
-                if (args.add_spdx and lineno == props['spdx_insertion'] and
-                    not props['spdx_insertion_before']):
-                    modified = insert_spdx(out, props)
         if modified:
             mode = os.stat(file).st_mode
             os.rename(newfile, file)
             os.chmod(file, mode)
         else:
             os.remove(newfile)
+
+# (A AND B) -> [A, B]
+# (A OR B) -> [A, B]
+def parse_spdx_expr(expr):
+    s = expr.replace('(', '')
+    s = s.replace(')', '')
+    s = s.replace('AND', '')
+    s = s.replace('OR', '')
+
+    return s.split()
 
 def process(file):
     if not os.path.isfile(file):
@@ -374,12 +376,12 @@ def process(file):
     if args.linaro_only and not props['pureLinaroCopyright']:
         return
     if (args.unlicensed_only and (props['licenses'] or
-            props['SPDX_IDs'])):
+            props['SPDX_ID'])):
         return
     if args.mistagged_only:
         mistagged = False
         for lic in props['licenses']:
-            if lic not in props['SPDX_IDs']:
+            if lic not in parse_spdx_expr(props['SPDX_ID']):
                 mistagged = True
         if not mistagged:
             return
