@@ -80,6 +80,7 @@ ISCEnd = 'IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE'
 GPLStart = 'terms of the GNU General Public License'
 GPLv2OrLater = 'either version 2'
 GPLEnd = 'You should have received a copy'
+MIT = 'substantial portions of the Software'
 
 AllRightsReserved = 'All rights reserved'
 
@@ -239,6 +240,8 @@ def file_props(file):
                 props['licenses'].add('Apache-2.0')
             if ZlibRef in line:
                 props['licenses'].add('Zlib')
+            if MIT in line:
+                props['licenses'].add('MIT')
 
             match = re.search(SPDX_ID, line)
             if match:
@@ -267,7 +270,7 @@ def print_file_and_props(file, props, show_licenses = False, show_spdx = False):
         if props['licenses']:
             for lic in props['licenses']:
                 print('', lic, end='')
-                if props['lic_start_end'] and props['lic_start_end'][lic]:
+                if props['lic_start_end'] and props['lic_start_end'].get(lic):
                     first = props['lic_start_end'][lic][0]
                     last = props['lic_start_end'][lic][1]
                     print(' ({:d}-{:d})'.format(first, last), end='')
