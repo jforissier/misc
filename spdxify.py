@@ -405,7 +405,7 @@ def main():
 
     ignore = ['.new', '.png', '.odg', '.checkpatch', '.txt', '.doc', '.html',
                 '.dot', '.svg', '.msc', '.xml', '.md', 'LICENSE', '.license',
-                '.pem', '.orig', '.patch', '.xsl', '.a']
+                '.pem', '.orig', '.patch', '.xsl', '.a', '.rst' ]
 
     parser = argparse.ArgumentParser(description='Analyze or modify the '
                                      'license and copyright headers found in '
