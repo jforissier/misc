@@ -81,6 +81,7 @@ GPLStart = 'terms of the GNU General Public License'
 GPLv2OrLater = 'either version 2'
 GPLEnd = 'You should have received a copy'
 MIT = 'substantial portions of the Software'
+ISC = 'PERFORMANCE OF THIS SOFTWARE'
 
 AllRightsReserved = 'All rights reserved'
 
@@ -242,6 +243,8 @@ def file_props(file):
                 props['licenses'].add('Zlib')
             if MIT in line:
                 props['licenses'].add('MIT')
+            if ISC in line:
+                props['licenses'].add('ISC')
 
             match = re.search(SPDX_ID, line)
             if match:
