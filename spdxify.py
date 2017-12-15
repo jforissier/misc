@@ -187,7 +187,7 @@ def file_props(file):
     with open(file) as f:
         for line in f:
             lineno = lineno + 1
-            if lineno == 1 and line[:1] == '#!':
+            if lineno == 1 and line[:2] == '#!':
                 props['spdx_insertion'] = 2
 
             if 'Copyright' in line:
