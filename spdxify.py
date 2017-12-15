@@ -152,6 +152,8 @@ def comment_prefix(file):
 
 
 def comment_prefix_for_SPDX(file):
+    if (file.endswith('.ld') or file.endswith('.S')):
+       return '/* '
     if has_c_comment_style(file):
         return '// '
     if has_hash_comment_style(file):
@@ -159,10 +161,16 @@ def comment_prefix_for_SPDX(file):
     return ''
 
 
+def comment_suffix_for_SPDX(file):
+    if (file.endswith('.ld') or file.endswith('.S')):
+       return ' */'
+    return ''
+
+
 def file_props(file):
     props = { 'licenses': set([]), 'lic_start_end': {}, 'SPDX_ID': '',
                 'arr': False, 'spdx_insertion': 1,
-                'multiple_copyright_blocks': False, 'comment_prefix_for_SPDX':'',
+                'multiple_copyright_blocks': False,
                 'has_dual_license': False, 'operator': ' AND ', 'file': file }
     commentPrefix = ''
     lineno = 0
@@ -176,7 +184,6 @@ def file_props(file):
     blank_line_in_first_copyright_block = False
 
     commentPrefix = comment_prefix(file)
-    props['comment_prefix_for_SPDX'] = comment_prefix_for_SPDX(file)
 
     if commentPrefix == '':
         print('Error: unknown comment style for file: ' + file)
@@ -326,8 +333,9 @@ def insert_spdx(out, props):
 
     if props['licenses']:
         expr = spdx_expr(props)
-        out.write(props['comment_prefix_for_SPDX'] +
-                    'SPDX-License-Identifier: ' + expr + '\n')
+        out.write(comment_prefix_for_SPDX(props['file']) +
+                    'SPDX-License-Identifier: ' + expr +
+                    comment_suffix_for_SPDX(props['file']) + '\n')
         modified = True
         if props['has_dual_license'] and len(props['licenses']) > 2:
             print('Warning: please check if operator is correct:', tag,
