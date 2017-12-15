@@ -18,7 +18,8 @@
 #   1.3 Shall not contain the mention 'All rights reserved' or similar
 #   1.4 The SPDX license identifier shall be the first possible line in the
 #       file which can contain a comment.
-#   1.5 The comment style for the SPDX line in C files shall be //.
+#   1.5 The comment style for the SPDX line in C source files shall be //. It
+#       shall be /* */ in C header files, assembly files and linker scripts.
 #   1.6 Files imported from external projects are not new files. The rules for
 #       existing files below apply.
 #   1.7 Example:
@@ -152,7 +153,8 @@ def comment_prefix(file):
 
 
 def comment_prefix_for_SPDX(file):
-    if (file.endswith('.ld') or file.endswith('.S')):
+    if (file.endswith('.ld') or file.endswith('.S') or
+        file.endswith('.h')):
        return '/* '
     if has_c_comment_style(file):
         return '// '
@@ -162,7 +164,8 @@ def comment_prefix_for_SPDX(file):
 
 
 def comment_suffix_for_SPDX(file):
-    if (file.endswith('.ld') or file.endswith('.S')):
+    if (file.endswith('.ld') or file.endswith('.S') or
+        file.endswith('.h')):
        return ' */'
     return ''
 
