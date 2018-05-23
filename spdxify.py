@@ -50,6 +50,9 @@
 # $ ./spdxify.py --linaro-only --strip-license-text TOPDIR
 #   ... removes the full license text from the Linaro files
 #
+# $ ./spdxify.py --strip-spdx --add-spdx TOPDIR
+#   ... removes existing (possibly misplaced) SPDX tags and add new ones
+#
 # [1] https://spdx.org/licenses/
 # [2] https://reuse.software/practices/
 
@@ -364,7 +367,7 @@ def insert_spdx(out, props):
     return modified
 
 def generate_new(file, props):
-    if not (args.strip_arr or args.strip_license_text or args.add_spdx):
+    if not (args.strip_arr or args.strip_license_text or args.add_spdx or args.strip_spdx):
         return
 
     newfile = file + '.new'
@@ -382,6 +385,9 @@ def generate_new(file, props):
                     continue
                 if args.add_spdx and lineno == props['spdx_insertion']:
                     modified = insert_spdx(out, props)
+                elif args.strip_spdx and re.search(SPDX_ID, line):
+                    modified = True
+                    continue
                 out.write(line) 
         if modified:
             mode = os.stat(file).st_mode
@@ -465,6 +471,8 @@ def main():
                         help='generate .new files without the ARR mention.')
     parser.add_argument('--strip-license-text', action='store_true',
                         help='generate .new files without license text.')
+    parser.add_argument('--strip-spdx', action='store_true',
+                        help='generate .new files without existing SPDX tags.')
     parser.add_argument('--add-spdx', action='store_true',
                         help='add SPDX identifier(s) to .new files.')
     parser.add_argument('-k', '--keep-going', action='store_true',
