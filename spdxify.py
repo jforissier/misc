@@ -125,7 +125,10 @@ def identify_license(text, file):
                     bsd = 'BSD-Source-Code'
         if not bsd: 
             print('Error: unknown BSD-like license in file:', file)
-            exit(1)
+            if args.keep_going:
+                return ''
+            else:
+                exit(1)
         return bsd
 
     if hasGPLStart and hasGPLv2OrLater:
@@ -190,7 +193,10 @@ def file_props(file):
 
     if commentPrefix == '':
         print('Error: unknown comment style for file: ' + file)
-        exit(1)
+        if args.keep_going:
+            return props
+        else:
+            exit(1)
     else:
         props['commentPrefix'] = commentPrefix
 
@@ -233,7 +239,10 @@ def file_props(file):
                 if in_license:
                     print('Error: duplicate license start, file:', file,
                             'line:', lineno)
-                    exit(1)
+                    if args.keep_going:
+                        return
+                    else:
+                        exit(1)
                 in_license = lineno
             if (BSDEnd in line or ZlibEnd in line or ISCEnd in line or
                 GPLEnd in line):
@@ -262,7 +271,10 @@ def file_props(file):
                 if props['SPDX_ID']:
                     print('Error: multiple SPDX-License-Identifier tag, file:',
                           file)
-                    exit(1)
+                    if args.keep_going:
+                        return props
+                    else:
+                        exit(1)
                 props['SPDX_ID'] = id
 
             if AllRightsReserved in line:
@@ -270,6 +282,10 @@ def file_props(file):
 
     if in_license:
         print('Error: end of license text not found, file: ', file)
+        if args.keep_going:
+            return props
+        else:
+            exit(1)
 
     props['pureLinaroCopyright'] = (hasLinaroCopyright and not
                                     hasOtherCopyright)
@@ -450,6 +466,8 @@ def main():
                         help='generate .new files without license text.')
     parser.add_argument('--add-spdx', action='store_true',
                         help='add SPDX identifier(s) to .new files.')
+    parser.add_argument('-k', '--keep-going', action='store_true',
+                        help='keep going as much as possible after an error.')
     parser.add_argument('root', nargs=1, 
                         help='the source tree root. All files under this '
                         'root that are considered \'source files\' will be '
