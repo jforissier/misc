@@ -89,6 +89,12 @@ ISC = 'PERFORMANCE OF THIS SOFTWARE'
 
 AllRightsReserved = 'All rights reserved'
 
+def error_prefix():
+    if args.keep_going:
+        return 'Error (ignored): '
+    else:
+        return 'Error: '
+
 def identify_license(text, file):
     hasBSDStart = False
     hasBSDClause1 = False
@@ -127,7 +133,7 @@ def identify_license(text, file):
                 if hasBSDClause3:
                     bsd = 'BSD-Source-Code'
         if not bsd: 
-            print('Error: unknown BSD-like license in file:', file)
+            print(error_prefix() + 'unknown BSD-like license in file:', file)
             if args.keep_going:
                 return ''
             else:
@@ -195,7 +201,7 @@ def file_props(file):
     commentPrefix = comment_prefix(file)
 
     if commentPrefix == '':
-        print('Error: unknown comment style for file: ' + file)
+        print(error_prefix() + 'unknown comment style for file: ' + file)
         if args.keep_going:
             return props
         else:
@@ -240,7 +246,7 @@ def file_props(file):
             if (re.search(BSDStart, line) or ZlibStart in line or
                 ISCStart in line or GPLStart in line):
                 if in_license:
-                    print('Error: duplicate license start, file:', file,
+                    print(error_prefix() + 'duplicate license start, file:', file,
                             'line:', lineno)
                     if args.keep_going:
                         return
@@ -273,7 +279,7 @@ def file_props(file):
                 id = match.group('SPDX_ID').strip()
                 id = re.sub(' *\*/$', '', id);
                 if props['SPDX_ID']:
-                    print('Error: multiple SPDX-License-Identifier tag, file:',
+                    print(error_prefix() + 'multiple SPDX-License-Identifier tag, file:',
                           file)
                     if args.keep_going:
                         return props
