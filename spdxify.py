@@ -268,6 +268,7 @@ def file_props(file):
             match = re.search(SPDX_ID, line)
             if match:
                 id = match.group('SPDX_ID').strip()
+                id = re.sub(' *\*/$', '', id);
                 if props['SPDX_ID']:
                     print('Error: multiple SPDX-License-Identifier tag, file:',
                           file)
