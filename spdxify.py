@@ -468,13 +468,13 @@ def main():
                         help='show only files that contain the \'All rights '
                         'reserved\' mention.')
     parser.add_argument('--strip-arr', action='store_true',
-                        help='generate .new files without the ARR mention.')
+                        help='remove the \'All Rights Reserved\' mention.')
     parser.add_argument('--strip-license-text', action='store_true',
-                        help='generate .new files without license text.')
+                        help='remove full license text.')
     parser.add_argument('--strip-spdx', action='store_true',
-                        help='generate .new files without existing SPDX tags.')
+                        help='remove existing SPDX identifier(s).')
     parser.add_argument('--add-spdx', action='store_true',
-                        help='add SPDX identifier(s) to .new files.')
+                        help='add SPDX identifier(s).')
     parser.add_argument('-k', '--keep-going', action='store_true',
                         help='keep going as much as possible after an error.')
     parser.add_argument('root', nargs=1, 
