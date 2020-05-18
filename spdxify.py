@@ -81,9 +81,9 @@ ZlibEnd = ZlibClause3
 ZlibRef = 'see copyright notice in zlib.h'
 ISCStart = 'Permission to use, copy, modify, and distribute this software'
 ISCEnd = 'IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE'
-GPLStart = 'terms of the GNU General Public License'
+GPLStart = 'This program is free software; you can redistribute it'
 GPLv2OrLater = 'either version 2'
-GPLEnd = 'You should have received a copy'
+GPLEnd = 'GNU General Public License for more details'
 MIT = 'substantial portions of the Software'
 ISC = 'PERFORMANCE OF THIS SOFTWARE'
 
@@ -142,6 +142,9 @@ def identify_license(text, file):
 
     if hasGPLStart and hasGPLv2OrLater:
         return 'GPL-2.0+'
+
+    if hasGPLStart:
+        return 'GPL-2.0'
 
     # Unknown license
     return ''
