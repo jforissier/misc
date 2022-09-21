@@ -293,8 +293,11 @@ def file_props(file):
             if AllRightsReserved in line:
                 props['arr'] = True
 
-    if args.default_bsd2 and not props['licenses']:
-        props['licenses'].add('BSD-2-Clause')
+    if not props['licenses']:
+        if args.default_bsd2:
+            props['licenses'].add('BSD-2-Clause')
+        elif args.default_license:
+            props['licenses'].add(args.default_license)
 
     if in_license:
         print('Error: end of license text not found, file: ', file)
@@ -487,9 +490,11 @@ def main():
                         help='remove existing SPDX identifier(s).')
     parser.add_argument('--add-spdx', action='store_true',
                         help='add SPDX identifier(s).')
+    parser.add_argument('--default-license', action='store',
+                        help='assume files are licensed with DEFAULT_LICENSE '
+                        'when no identifiable licensing terms are found')
     parser.add_argument('--default-bsd2', action='store_true',
-                        help='assume files are BSD-2-Clause when no '
-                        'identifiable licensing terms are found')
+                        help='same as --default-license "BSD-2-Clause"')
     parser.add_argument('-k', '--keep-going', action='store_true',
                         help='keep going as much as possible after an error.')
     parser.add_argument('root', nargs=1, 
